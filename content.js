@@ -23,7 +23,7 @@ style.textContent = `
 .chzzk-ambient-panel input[type=range]{width:120px}`;
 document.head.append(style);
 
-let video = null;
+let video = null, anchor = null;
 const tinted = new Map(); // element -> its original inline background-color
 
 function apply() {
@@ -122,7 +122,7 @@ for (const t of ['click', 'dblclick', 'mousedown', 'mouseup', 'pointerdown', 'po
 
 function injectButton() {
   const r = video.getBoundingClientRect();
-  const anchor = [...document.querySelectorAll('button, [role=button]')].filter(b => {
+  anchor = [...document.querySelectorAll('button, [role=button]')].filter(b => {
     if (b === btn) return false;
     const br = b.getBoundingClientRect();
     return br.width && br.bottom <= r.bottom + 1 && br.bottom > r.bottom - 80 && br.left > r.left + r.width / 2 && br.right <= r.right + 1;
@@ -146,8 +146,20 @@ setInterval(() => {
   if (cfg.enabled && video && !document.fullscreenElement) tintPage(pictureRect(video));
 }, 500);
 
+// The player hides its controls per button, so mirror the neighbour's visibility; close the panel with them.
+function syncButton() {
+  if (!anchor?.isConnected) return;
+  const s = getComputedStyle(anchor), shown = s.visibility !== 'hidden' && +s.opacity > 0.05;
+  btn.style.opacity = s.opacity;
+  btn.style.visibility = s.visibility;
+  if (!shown) panel.hidden = true;
+}
+// Clicking anywhere outside our button/panel closes the panel.
+addEventListener('pointerdown', e => { if (!btn.contains(e.target) && !panel.contains(e.target)) panel.hidden = true; }, true);
+
 function loop() {
   requestAnimationFrame(loop);
+  syncButton();
   // Fullscreen only renders the fullscreen element's subtree, so the canvas has to live inside it.
   const host = document.fullscreenElement || document.documentElement;
   if (canvas.parentElement !== host) host.append(canvas);
