@@ -2,8 +2,8 @@
 // scale it up and blur it. ponytail: CSS blur instead of the original's WebGL pipeline.
 let cfg = { enabled: true, scale: 1.6, blur: 80, opacity: 1, saturate: 1.5, panel: 0.4 };
 const FIELDS = [
-  ['enabled', '켜기'], ['scale', '크기', 1, 2.5, 0.05], ['blur', '흐림', 0, 150, 5],
-  ['opacity', '밝기', 0, 1, 0.05], ['saturate', '채도', 0, 3, 0.1], ['panel', '패널 불투명도', 0, 1, 0.05],
+  ['enabled', '켜기'], ['scale', '크기', 1, 2.5, 0.01], ['blur', '흐림', 0, 150, 1],
+  ['opacity', '밝기', 0, 1, 0.01], ['saturate', '채도', 0, 3, 0.01], ['panel', '패널 불투명도', 0, 1, 0.01],
 ];
 
 const canvas = document.createElement('canvas');
@@ -17,22 +17,34 @@ style.textContent = `
 .chzzk-ambient-clear{background:transparent!important}
 .chzzk-ambient-btn{display:flex;flex:none;padding:0;align-items:center;justify-content:center;color:#fff;background:none;border:0;cursor:pointer}
 .chzzk-ambient-btn.on{color:#00ffa3}
-.chzzk-ambient-panel{position:absolute;right:16px;bottom:64px;z-index:2147483647;width:240px;padding:12px 14px;border-radius:10px;
+.chzzk-ambient-panel{position:absolute;right:16px;bottom:64px;z-index:2147483647;width:290px;padding:12px 14px;border-radius:10px;
   background:rgba(20,21,23,.92);color:#eee;font:13px system-ui,sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.5)}
 .chzzk-ambient-panel label{display:flex;justify-content:space-between;align-items:center;margin:8px 0;gap:8px}
-.chzzk-ambient-panel input[type=range]{width:120px}`;
+.chzzk-ambient-panel label span{display:flex;align-items:center;gap:6px}
+.chzzk-ambient-panel input[type=range]{width:120px}
+.chzzk-ambient-panel input[type=number]{width:58px;padding:2px 4px;border:1px solid #444;border-radius:4px;background:#2b2d31;color:#eee;font:12px system-ui,sans-serif}`;
 document.head.append(style);
 
 let video = null, anchor = null;
 const tinted = new Map(); // element -> its original inline background-color
 
-function apply() {
+// Cheap settings (size, blur, brightness...) only restyle the canvas, so dragging a slider never flickers the page.
+function applyLook() {
   canvas.style.filter = `blur(${cfg.blur}px) saturate(${cfg.saturate})`;
   canvas.style.opacity = cfg.opacity;
   btn.classList.toggle('on', cfg.enabled);
-  for (const [k] of FIELDS) { const el = panel.querySelector('#ca-' + k); el[el.type === 'checkbox' ? 'checked' : 'value'] = cfg[k]; }
+  for (const el of panel.querySelectorAll('input')) {
+    if (el === document.activeElement) continue; // don't rewrite the box the user is typing in
+    const k = el.id.slice(3).replace(/-n$/, '');
+    el[el.type === 'checkbox' ? 'checked' : 'value'] = cfg[k];
+  }
+}
+
+// On/off and panel opacity change the page itself: undo and redo the tint right away.
+function retint() {
   untint();
   setVideo(cfg.enabled ? video : null);
+  if (cfg.enabled && video && !document.fullscreenElement) tintPage(pictureRect(video));
 }
 
 // The canvas sits at z-index -1, so every opaque ancestor of the player would hide it.
@@ -102,12 +114,22 @@ btn.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" str
 const panel = document.createElement('div');
 panel.className = 'chzzk-ambient-panel';
 panel.hidden = true;
-panel.innerHTML = FIELDS.map(([k, name, min, max, step]) => min === undefined
-  ? `<label>${name} <input type="checkbox" id="ca-${k}"></label>`
-  : `<label>${name} <input type="range" id="ca-${k}" min="${min}" max="${max}" step="${step}"></label>`).join('');
-for (const [k] of FIELDS) {
-  const el = panel.querySelector('#ca-' + k);
-  el.oninput = () => chrome.storage.local.set({ [k]: el.type === 'checkbox' ? el.checked : +el.value });
+panel.innerHTML = FIELDS.map(([k, name, min, max, step]) => {
+  if (min === undefined) return `<label>${name} <input type="checkbox" id="ca-${k}"></label>`;
+  const attrs = `min="${min}" max="${max}" step="${step}"`;
+  return `<label>${name}<span><input type="range" id="ca-${k}" ${attrs}><input type="number" id="ca-${k}-n" ${attrs}></span></label>`;
+}).join('');
+for (const [k, , min, max, step] of FIELDS) {
+  const el = panel.querySelector('#ca-' + k), num = panel.querySelector(`#ca-${k}-n`);
+  if (!num) { el.oninput = () => chrome.storage.local.set({ [k]: el.checked }); continue; }
+  const digits = (String(step).split('.')[1] || '').length;
+  const save = v => {
+    if (v === '' || isNaN(v)) return; // half-typed number like "0."
+    chrome.storage.local.set({ [k]: +Math.min(max, Math.max(min, +v)).toFixed(digits) });
+  };
+  el.oninput = () => { num.value = el.value; save(el.value); };
+  num.oninput = () => save(num.value);
+  num.onchange = () => { num.value = cfg[k]; }; // show the clamped value once editing ends
 }
 // Keep clicks on our UI from reaching the player (which would pause/play or hide controls).
 for (const t of ['click', 'dblclick', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'keydown', 'wheel']) {
@@ -119,6 +141,9 @@ for (const t of ['click', 'dblclick', 'mousedown', 'mouseup', 'pointerdown', 'po
     if (t === 'click') panel.hidden = !panel.hidden;
   }, true);
 }
+// Typing a value must not trigger player shortcuts (space = pause, digits/arrows = seek, f = fullscreen).
+for (const t of ['keydown', 'keyup', 'keypress'])
+  window.addEventListener(t, e => { if (panel.contains(e.target)) e.stopImmediatePropagation(); }, true);
 
 function injectButton() {
   const r = video.getBoundingClientRect();
@@ -152,7 +177,7 @@ function syncButton() {
   const s = getComputedStyle(anchor), shown = s.visibility !== 'hidden' && +s.opacity > 0.05;
   btn.style.opacity = s.opacity;
   btn.style.visibility = s.visibility;
-  if (!shown) panel.hidden = true;
+  if (!shown && !panel.matches(':hover')) panel.hidden = true; // never close under the user's mouse
 }
 // Clicking anywhere outside our button/panel closes the panel.
 addEventListener('pointerdown', e => { if (!btn.contains(e.target) && !panel.contains(e.target)) panel.hidden = true; }, true);
@@ -172,8 +197,12 @@ function loop() {
   });
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 }
-chrome.storage.local.get(cfg, s => { cfg = s; apply(); });
-chrome.storage.onChanged.addListener(c => { for (const k in c) cfg[k] = c[k].newValue; apply(); });
+chrome.storage.local.get(cfg, s => { cfg = s; applyLook(); retint(); });
+chrome.storage.onChanged.addListener(c => {
+  for (const k in c) cfg[k] = c[k].newValue;
+  applyLook();
+  if ('enabled' in c || 'panel' in c) retint();
+});
 loop();
 
 // Popup asks "why can't I see it?": report the video state and what is painted over the glow.

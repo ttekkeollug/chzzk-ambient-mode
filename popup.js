@@ -2,9 +2,23 @@ const DEFAULTS = { enabled: true, scale: 1.6, blur: 80, opacity: 1, saturate: 1.
 
 chrome.storage.local.get(DEFAULTS, s => {
   for (const [k, v] of Object.entries(s)) {
-    const el = document.getElementById(k);
-    el[el.type === 'checkbox' ? 'checked' : 'value'] = v;
-    el.oninput = () => chrome.storage.local.set({ [k]: el.type === 'checkbox' ? el.checked : +el.value });
+    const el = document.getElementById(k), num = document.getElementById(k + '-n');
+    if (!num) {
+      el.checked = v;
+      el.oninput = () => chrome.storage.local.set({ [k]: el.checked });
+      continue;
+    }
+    el.value = num.value = v;
+    const digits = (el.step.split('.')[1] || '').length;
+    const save = x => {
+      if (x === '' || isNaN(x)) return; // half-typed number like "0."
+      const clamped = +Math.min(+el.max, Math.max(+el.min, +x)).toFixed(digits);
+      el.value = clamped;
+      chrome.storage.local.set({ [k]: clamped });
+    };
+    el.oninput = () => { num.value = el.value; save(el.value); };
+    num.oninput = () => save(num.value);
+    num.onchange = () => { num.value = el.value; }; // show the clamped value once editing ends
   }
 });
 

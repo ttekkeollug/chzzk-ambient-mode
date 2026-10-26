@@ -1,10 +1,12 @@
 <!doctype html>
 <meta charset="utf-8">
 <style>
-  body { width: 260px; margin: 0; padding: 14px; font: 13px system-ui, sans-serif; background: #1e1f22; color: #eee; }
+  body { width: 300px; margin: 0; padding: 14px; font: 13px system-ui, sans-serif; background: #1e1f22; color: #eee; }
   h1 { font-size: 14px; margin: 0 0 12px; }
   label { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; gap: 8px; }
-  input[type=range] { width: 130px; }
+  label span { display: flex; align-items: center; gap: 6px; }
+  input[type=range] { width: 120px; }
+  input[type=number] { width: 58px; padding: 2px 4px; border: 1px solid #444; border-radius: 4px; background: #2b2d31; color: #eee; font: 12px system-ui, sans-serif; }
   #status { margin-top: 12px; padding: 8px; border-radius: 6px; background: #2b2d31; white-space: pre-wrap; font-size: 12px; line-height: 1.5; }
   details { margin-top: 12px; }
   summary { cursor: pointer; }
@@ -12,11 +14,11 @@
 </style>
 <h1>치지직 앰비언트</h1>
 <label>켜기 <input type="checkbox" id="enabled"></label>
-<label>크기 <input type="range" id="scale" min="1" max="2.5" step="0.05"></label>
-<label>흐림 <input type="range" id="blur" min="0" max="150" step="5"></label>
-<label>밝기 <input type="range" id="opacity" min="0" max="1" step="0.05"></label>
-<label>채도 <input type="range" id="saturate" min="0" max="3" step="0.1"></label>
-<label>패널 불투명도 <input type="range" id="panel" min="0" max="1" step="0.05"></label>
+<label>크기<span><input type="range" id="scale" min="1" max="2.5" step="0.01"><input type="number" id="scale-n" min="1" max="2.5" step="0.01"></span></label>
+<label>흐림<span><input type="range" id="blur" min="0" max="150" step="1"><input type="number" id="blur-n" min="0" max="150" step="1"></span></label>
+<label>밝기<span><input type="range" id="opacity" min="0" max="1" step="0.01"><input type="number" id="opacity-n" min="0" max="1" step="0.01"></span></label>
+<label>채도<span><input type="range" id="saturate" min="0" max="3" step="0.01"><input type="number" id="saturate-n" min="0" max="3" step="0.01"></span></label>
+<label>패널 불투명도<span><input type="range" id="panel" min="0" max="1" step="0.01"><input type="number" id="panel-n" min="0" max="1" step="0.01"></span></label>
 <div id="status">상태 확인 중…</div>
 <details>
   <summary>☕ 개발자에게 커피 사주기</summary>
