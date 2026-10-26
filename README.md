@@ -1,6 +1,6 @@
 # Chzzk Ambient Mode
 
-치지직(chzzk.naver.com)에 유튜브 앰비언트 모드 같은 글로우를 입히는 크롬 확장 프로그램입니다.
+치지직(chzzk.naver.com)에 앰비언트 모드 입히는 크롬 확장 프로그램입니다.
 [youtube-ambilight](https://github.com/WesselKroos/youtube-ambilight)의 원리(영상 프레임을 작은 캔버스에 그려 플레이어 뒤에서 크게 흐리게 표시)를 단순하게 옮겼습니다.
 
 ## 기능
