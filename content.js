@@ -22,7 +22,9 @@ style.textContent = `
 .chzzk-ambient-panel label{display:flex;justify-content:space-between;align-items:center;margin:8px 0;gap:8px}
 .chzzk-ambient-panel label span{display:flex;align-items:center;gap:6px}
 .chzzk-ambient-panel input[type=range]{width:120px}
-.chzzk-ambient-panel input[type=number]{width:58px;padding:2px 4px;border:1px solid #444;border-radius:4px;background:#2b2d31;color:#eee;font:12px system-ui,sans-serif}`;
+.chzzk-ambient-panel input[type=number]{width:58px;padding:2px 4px;border:1px solid #444;border-radius:4px;background:#2b2d31;color:#eee;font:12px system-ui,sans-serif}
+.chzzk-ambient-panel .ca-support{display:block;margin-top:10px;padding:7px;border-radius:6px;background:#2b2d31;color:#eee;text-align:center;text-decoration:none}
+.chzzk-ambient-panel .ca-support:hover{background:#35373c}`;
 document.head.append(style);
 
 let video = null, anchor = null;
@@ -119,6 +121,7 @@ panel.innerHTML = FIELDS.map(([k, name, min, max, step]) => {
   const attrs = `min="${min}" max="${max}" step="${step}"`;
   return `<label>${name}<span><input type="range" id="ca-${k}" ${attrs}><input type="number" id="ca-${k}-n" ${attrs}></span></label>`;
 }).join('');
+panel.insertAdjacentHTML('beforeend', '<a class="ca-support" href="https://chzzk.naver.com/live/61fd47147848ac0035788e31fe000090/chat?studio=true" target="_blank" rel="noopener">💝 개발비용 지원하기</a>');
 for (const [k, , min, max, step] of FIELDS) {
   const el = panel.querySelector('#ca-' + k), num = panel.querySelector(`#ca-${k}-n`);
   if (!num) { el.oninput = () => chrome.storage.local.set({ [k]: el.checked }); continue; }
